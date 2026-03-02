@@ -667,7 +667,7 @@ fi
 #### Start browser (or debug mode)  and wait/sleep
 if [ "$DEBUG_MODE" != true ]; then
     ### Run browser in the background and wait for process to exit
-    $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} -C /root/.config/qutebrowser/config.py --target window ":fullscreen --enter" "$HA_URL/$HA_DASHBOARD" &
+    QTWEBENGINE_DISABLE_SANDBOX=1 $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} -C /root/.config/qutebrowser/config.py --target window ":fullscreen --enter" "$HA_URL/$HA_DASHBOARD" &
     bashio::log.info "Launching $BROWSER browser(PID=$!): $BROWSER_FLAGS $HA_URL/$HA_DASHBOARD"
 
     count=0
