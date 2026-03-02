@@ -668,7 +668,7 @@ fi
 if [ "$DEBUG_MODE" != true ]; then
     ### Run browser in the background and wait for process to exit
     $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} "$HA_URL/$HA_DASHBOARD" &
-    bashio::log.info "Launching $BROWSER browser(PID=$!): $HA_URL/$HA_DASHBOARD"
+    bashio::log.info "Launching $BROWSER browser(PID=$!): $BROWSER_FLAGS $HA_URL/$HA_DASHBOARD"
 
     count=0
     while true; do  # Wait for all browser processes to exit
