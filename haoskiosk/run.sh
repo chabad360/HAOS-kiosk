@@ -82,8 +82,8 @@ trap cleanup HUP INT QUIT ABRT TERM EXIT
 
 ################################################################################
 #### Variables
-BROWSER="luakit"
-BROWSER_FLAGS=
+BROWSER="qutebrowser"
+BROWSER_FLAGS="-C /root/.config/qutebrowser/config.py --target window ":fullscreen --enter""
 
 ################################################################################
 #### Get config variables from HA add-on & set environment variables
