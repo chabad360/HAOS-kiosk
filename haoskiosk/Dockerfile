@@ -63,7 +63,8 @@ RUN apk update && apk add --no-cache \
       x11vnc \
 # Browser
 #    luakit \
-   && apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/v3.21/community luakit=2.3.6-r0 \
+     qutebrowser \
+   # && apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/v3.21/community luakit=2.3.6-r0 \
    && rm -rf /var/cache/apk/*
 
 #===============================================================================
@@ -73,7 +74,7 @@ ENV DISPLAY=:0
 
 ##### Copy over 'xorg.conf.default' and lua 'userconf.lua' file
 COPY xorg.conf.default /etc/X11/
-COPY userconf.lua /root/.config/luakit/
+COPY config.py /root/.config/qutebrowser/
 COPY translations/*.yaml /translations/
 
 COPY run.sh /
@@ -85,7 +86,7 @@ RUN pip install --no-cache-dir  --break-system-packages aiohttp #Required for re
 
 #### Patches
 # Need to patch 'unique_instance.lua' so that new instance urls overwrite active url rather than add new tab
-COPY unique_instance.patch /usr/share/luakit/lib
-RUN patch -p2 /usr/share/luakit/lib/unique_instance.lua < /usr/share/luakit/lib/unique_instance.patch
+#COPY unique_instance.patch /usr/share/luakit/lib
+#RUN patch -p2 /usr/share/luakit/lib/unique_instance.lua < /usr/share/luakit/lib/unique_instance.patch
 
 CMD ["/run.sh"]
