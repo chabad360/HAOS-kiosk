@@ -48,6 +48,8 @@ RUN apk update && apk add --no-cache \
      util-linux \
      patch \
      scrot \
+     dbus \
+     dconf \
 ### Full Timezone info
      icu-data-full \
 ### Python libraries
