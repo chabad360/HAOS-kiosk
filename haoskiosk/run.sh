@@ -667,20 +667,20 @@ fi
 #### Start browser (or debug mode)  and wait/sleep
 if [ "$DEBUG_MODE" != true ]; then
     ### Run browser in the background and wait for process to exit
-    QTWEBENGINE_DISABLE_SANDBOX=1 $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} -C /root/.config/qutebrowser/config.py --target window ":fullscreen --enter" "$HA_URL/$HA_DASHBOARD" &
+    QTWEBENGINE_DISABLE_SANDBOX=1 $BROWSER ${BROWSER_FLAGS} -C /root/.config/qutebrowser/config.py --target window ":fullscreen --enter" "$HA_URL/$HA_DASHBOARD"
     bashio::log.info "Launching $BROWSER browser(PID=$!): $BROWSER_FLAGS $HA_URL/$HA_DASHBOARD"
 
-    count=0
-    while true; do  # Wait for all browser processes to exit
-        if pgrep -f -- "^$BROWSER " > /dev/null 2>&1; then
-            count=0
-        else
-            count=$((count + 1))
-        fi
-        [ $count -ge 3 ] && break # Exit if no browser process for at least 2*5=10 seconds
-        sleep 5
-    done
-    bashio::log.info "No $BROWSER instances remaining... exiting 'run.sh'..."
+    # count=0
+    # while true; do  # Wait for all browser processes to exit
+    #     if pgrep -f -- "^$BROWSER " > /dev/null 2>&1; then
+    #         count=0
+    #     else
+    #         count=$((count + 1))
+    #     fi
+    #     [ $count -ge 3 ] && break # Exit if no browser process for at least 2*5=10 seconds
+    #     sleep 5
+    # done
+    # bashio::log.info "No $BROWSER instances remaining... exiting 'run.sh'..."
 
 else  ### Debug mode
     bashio::log.info "Entering debug mode (X & $WINMGR window manager but no $BROWSER browser)..."
