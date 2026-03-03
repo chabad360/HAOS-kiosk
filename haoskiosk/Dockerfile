@@ -30,6 +30,7 @@ RUN apk update && apk add --no-cache \
 #     xev \
      libxkbcommon \
      setxkbmap \
+     dbus-x11 \
 ### Input, udev
      xf86-input-libinput \
      libinput \
@@ -53,8 +54,8 @@ RUN apk update && apk add --no-cache \
 ### Full Timezone info
      icu-data-full \
 ### Python libraries
-    py3-pip \
-    py3-xlib \
+     py3-pip \
+     py3-xlib \
 ### Sound
      pulseaudio-utils \
 #     alsa-utils alsa-plugins-pulse \
