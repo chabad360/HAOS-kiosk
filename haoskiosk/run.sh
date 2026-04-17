@@ -330,6 +330,7 @@ export GTK_USE_PORTAL=0               # Disable portals
 export GIO_USE_VFS=local              # Local-only GIO
 export DBUS_SESSION_BUS_TIMEOUT=5000  # Shorten DBUS timeouts
 export GTK_CSD=0                      # Disable client side decorations (???)
+export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"  # Required when running as root
 ################################################################################
 #### Start Dbus
 # Start dbus-daemon to avoid waiting for DBUS timeouts

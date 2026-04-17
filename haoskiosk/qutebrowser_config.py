@@ -38,7 +38,7 @@ c.window.hide_decoration = True
 
 # Ensure that URLs opened from new qutebrowser instances (IPC/command-line) land
 # in the current tab of the last-focused window, not in a new tab or window.
-c.new_instance_open_target = "current-tab"
+c.new_instance_open_target = "tab"
 c.new_instance_open_target_window = "last-focused"
 
 dark_mode = _as_bool(os.getenv("DARK_MODE"), True)
