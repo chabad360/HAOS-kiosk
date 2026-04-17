@@ -30,7 +30,8 @@ def _as_int(value: str | None, default: int, minimum: int) -> int:
 config.load_autoconfig(False)
 
 # Required when running as root (HAOS containers run as root)
-c.qt.args = ["--no-sandbox"]
+# qutebrowser expects raw Chromium arg names here (without leading "--").
+c.qt.args = ["no-sandbox"]
 
 c.auto_save.session = False
 c.url.default_page = "about:blank"

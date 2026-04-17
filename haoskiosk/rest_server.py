@@ -475,7 +475,7 @@ async def handle_launch_url(data: Payload) -> dict[str, Any]:
 @register_function("refresh_browser")
 async def handle_refresh_browser(data: Payload) -> dict[str, Any]:  # pylint: disable=unused-argument
     """Send Ctrl+R to refresh browser."""
-    result = await execute_command(["qutebrowser", "--command", ":reload"],
+    result = await execute_command(["qutebrowser", ":reload"],
                                    timeout=SHORT_TIMEOUT, log_prefix="refresh_browser", allow_command=True)
     return {"success": result["success"]}
 

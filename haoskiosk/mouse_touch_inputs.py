@@ -639,19 +639,19 @@ def register_function(
 @register_function("back")
 def handle_back(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Go back in browser history."""
-    cmd = ["qutebrowser", "--command", ":back"]
+    cmd = ["qutebrowser", ":back"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("forward")
 def handle_forward(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Go forward in browser history."""
-    cmd = ["qutebrowser", "--command", ":forward"]
+    cmd = ["qutebrowser", ":forward"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("refresh_browser")
 def handle_refresh_browser(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Reload current page."""
-    cmd = ["qutebrowser", "--command", ":reload"]
+    cmd = ["qutebrowser", ":reload"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("launch_url", optional=["url"])
