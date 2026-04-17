@@ -167,7 +167,7 @@ export GTK_CSD=0                      # Disable client side decorations (???)
 export QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1  # Needed for Onboard auto-show with Qt apps
 ################################################################################
 #### Configure qutebrowser
-QUTE_GREASEMONKEY_DIR="/root/.config/qutebrowser/greasemonkey"
+QUTE_GREASEMONKEY_DIR="/config/qutebrowser/greasemonkey"
 mkdir -p "$QUTE_GREASEMONKEY_DIR"
 export QUTE_GREASEMONKEY_DIR
 
@@ -816,8 +816,7 @@ fi
 #### Start browser (or debug mode)  and wait/sleep
 if [ "$DEBUG_MODE" != true ]; then
     ### Create temporary state
-    mkdir -p /root/.local/share/qutebrowser/
-    touch /root/.local/share/qutebrowser/state
+    export XDG_DATA_HOME=/config
     ### Run browser in the background and wait for process to exit
     $BROWSER ${BROWSER_FLAGS} &
     bashio::log.info "Launching $BROWSER browser(PID=$!): $HA_URL/$HA_DASHBOARD"
@@ -830,7 +829,7 @@ if [ "$DEBUG_MODE" != true ]; then
             while pgrep -f -- "^$BROWSER " > /dev/null 2>&1; do
                 sleep "$BROWSER_REFRESH"
                 pgrep -f -- "^$BROWSER " > /dev/null 2>&1 || break
-                xdotool key --clearmodifiers ctrl+r >/dev/null 2>&1 || true
+                qutebrowser :reload >/dev/null 2>&1 || true
             done
         ) &
     elif ! [[ "$BROWSER_REFRESH" =~ ^[0-9]+$ ]]; then
@@ -839,7 +838,7 @@ if [ "$DEBUG_MODE" != true ]; then
 
     # count=0
     # while true; do  # Wait for all browser processes to exit
-    #     if pgrep -f -- "^$BROWSER " > /dev/null 2>&1; then
+    #     if pgrep -f -- "$BROWSER " > /dev/null 2>&1; then
     #         count=0
     #     else
     #         count=$((count + 1))
@@ -853,6 +852,8 @@ else  ### Debug mode
     bashio::log.info "Entering debug mode (X & $WINMGR window manager but no $BROWSER browser)..."
     exec sleep infinite
 fi
+
+dbus-send --dest=org.onboard.Onboard /org/onboard/Onboard/Keyboard org.onboard.Onboard.Keyboard.Hide
 
 ### Launch Xinput parsing...
 bashio::log.info "Starting Mouse & Touch input gesture command parsing..."
