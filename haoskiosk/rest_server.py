@@ -164,7 +164,7 @@ FORBIDDEN_URL_CHARS: Final[set[str]] = {'"', "'", "`", "\\", "\n", "\r", "\t", "
 def is_valid_url(url: str) -> bool:
     """Validate URL format (allows http://, https://, bare domain/IP, path, query, fragment)."""
     url = url.strip()
-    if any(ch in url for ch in FORBIDDEN_URL_CHARS):
+    if set(url) & FORBIDDEN_URL_CHARS:
         return False
     return bool(url == 'about:blank' or VALID_URL_REGEX.fullmatch(url))
 
@@ -851,14 +851,21 @@ CORS_ALLOW_METHODS = "GET, POST, OPTIONS"
 
 # Matches localhost and loopback origins — the only origins that can reach this server
 # (which is bound to 127.0.0.1) — so any scheme+host combination on localhost is safe to allow.
+# The port is constrained to 1-65535; the regex validates digit count and _cors_origin()
+# checks the numeric value.
 _LOCAL_ORIGIN_RE: re.Pattern[str] = re.compile(
-    r'^https?://(?:127\.0\.0\.1|::1|localhost)(?::\d{1,5})?$', re.IGNORECASE
+    r'^https?://(?:127\.0\.0\.1|::1|localhost)(?::(\d{1,5}))?$', re.IGNORECASE
 )
 
 def _cors_origin(request: web.Request) -> str:
     """Return the request's Origin header if it is a local/localhost origin, else empty string."""
     origin = request.headers.get("Origin", "")
-    return origin if _LOCAL_ORIGIN_RE.match(origin) else ""
+    m = _LOCAL_ORIGIN_RE.match(origin)
+    if m:
+        port_str = m.group(1)
+        if port_str is None or 1 <= int(port_str) <= 65535:
+            return origin
+    return ""
 
 
 @web.middleware  #type: ignore[misc]

@@ -524,7 +524,7 @@ FORBIDDEN_URL_CHARS: Final[set[str]] = {'"', "'", "`", "\\", "\n", "\r", "\t", "
 def is_valid_url(url: str) -> bool:
     """Validate URL format (allows http://, https://, bare domain/IP, path, query, fragment)."""
     url = url.strip()
-    if any(ch in url for ch in FORBIDDEN_URL_CHARS):
+    if set(url) & FORBIDDEN_URL_CHARS:
         return False
     return bool(url == 'about:blank' or VALID_URL_REGEX.fullmatch(url))
 
