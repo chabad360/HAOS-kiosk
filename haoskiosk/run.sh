@@ -75,15 +75,14 @@ cleanup() {
     fi
     jobs -p | xargs -r kill
     [ -n "$TTY0_DELETED" ] && mknod -m 620 /dev/tty0 c 4 0
-    rm -f /root/.local/share/luakit/cookies.db  # Remove cookie storage (not really necessary, but just in case...)
     exit "$exit_code"
 }
 trap cleanup HUP INT QUIT ABRT TERM EXIT
 
 ################################################################################
 #### Variables
-BROWSER="luakit"
-BROWSER_FLAGS=
+BROWSER="qutebrowser"
+BROWSER_FLAGS=":fullscreen"
 
 ################################################################################
 #### Get config variables from HA add-on & set environment variables
@@ -165,13 +164,114 @@ export GTK_USE_PORTAL=0               # Disable portals
 export GIO_USE_VFS=local              # Local-only GIO
 export DBUS_SESSION_BUS_TIMEOUT=5000  # Shorten DBUS timeouts
 export GTK_CSD=0                      # Disable client side decorations (???)
+export QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1  # Needed for Onboard auto-show with Qt apps
 ################################################################################
+#### Configure qutebrowser
+mkdir -p /root/.config/qutebrowser/greasemonkey
+
+python3 <<'PY'
+import json
+import os
+from pathlib import Path
+
+def as_ms(value: str, default_seconds: float) -> int:
+    try:
+        return max(0, int(float(value) * 1000))
+    except (TypeError, ValueError):
+        return max(0, int(default_seconds * 1000))
+
+ha_url = (os.getenv("HA_URL", "http://localhost:8123") or "http://localhost:8123").rstrip("/")
+username = os.getenv("HA_USERNAME", "")
+password = os.getenv("HA_PASSWORD", "")
+login_delay_ms = as_ms(os.getenv("LOGIN_DELAY", "1"), 1.0)
+
+gm_script = f"""// ==UserScript==
+// @name         HAOS Kiosk Auto Login
+// @namespace    haoskiosk
+// @description  Auto-login Home Assistant and improve focus blur for onscreen keyboard
+// @match        *://*/*
+// @run-at       document-end
+// ==/UserScript==
+
+(function () {{
+  const HA_URL_BASE = {json.dumps(ha_url)};
+  const HA_USERNAME = {json.dumps(username)};
+  const HA_PASSWORD = {json.dumps(password)};
+  const LOGIN_DELAY_MS = {login_delay_ms};
+
+  function isEditable(el) {{
+    if (!el) return false;
+    if (el.isContentEditable) return true;
+    const tag = (el.tagName || '').toLowerCase();
+    return tag === 'input' || tag === 'textarea' || tag === 'select';
+  }}
+
+  function installKeyboardBlurHelper() {{
+    if (window.__haoskiosk_keyboard_blur_helper) return;
+    window.__haoskiosk_keyboard_blur_helper = true;
+
+    document.addEventListener('pointerdown', (event) => {{
+      const active = document.activeElement;
+      if (!isEditable(active)) return;
+      if (!event.target || !event.target.closest) return;
+      if (event.target.closest('input, textarea, select, [contenteditable=\"true\"]')) return;
+      active.blur();
+    }}, true);
+  }}
+
+  function onHaAuthPage() {{
+    return window.location.href.startsWith(`${{HA_URL_BASE}}/auth/`);
+  }}
+
+  function runAutoLogin() {{
+    if (!onHaAuthPage()) return;
+    if (window.__haoskiosk_login_attempted) return;
+    window.__haoskiosk_login_attempted = true;
+
+    setTimeout(() => {{
+      try {{
+        const haInputs = document.querySelectorAll('ha-input');
+        const usernameField =
+          haInputs[0]?.shadowRoot?.querySelector('wa-input')?.shadowRoot?.querySelector('input[autocomplete=\"username\"]') ||
+          document.querySelector('input[autocomplete=\"username\"]');
+        const passwordField =
+          haInputs[1]?.shadowRoot?.querySelector('wa-input')?.shadowRoot?.querySelector('input[autocomplete=\"current-password\"]') ||
+          document.querySelector('input[autocomplete=\"current-password\"]');
+        const submitButton = document.querySelector('ha-button, button[type=\"submit\"]');
+
+        if (!usernameField || !passwordField) {{
+          window.__haoskiosk_login_attempted = false;
+          return;
+        }}
+
+        usernameField.value = HA_USERNAME;
+        usernameField.dispatchEvent(new Event('input', {{ bubbles: true }}));
+        usernameField.dispatchEvent(new Event('change', {{ bubbles: true }}));
+
+        passwordField.value = HA_PASSWORD;
+        passwordField.dispatchEvent(new Event('input', {{ bubbles: true }}));
+        passwordField.dispatchEvent(new Event('change', {{ bubbles: true }}));
+
+        if (submitButton) submitButton.click();
+      }} catch (_err) {{
+        window.__haoskiosk_login_attempted = false;
+      }}
+    }}, LOGIN_DELAY_MS);
+  }}
+
+  installKeyboardBlurHelper();
+  runAutoLogin();
+  new MutationObserver(runAutoLogin).observe(document.documentElement, {{ childList: true, subtree: true }});
+}})();
+"""
+
+path = Path("/root/.config/qutebrowser/greasemonkey/haos_kiosk_autologin.js")
+path.write_text(gm_script, encoding="utf-8")
+PY
+
 #### Start Dbus
-# Start dbus-daemon to Avoids waiting for DBUS timeouts (e.g., luakit)
-# Also needed by luakit to enforce unique instance by default
-# Note do *not* use '-U' flag when calling luakit browser
-# Subsequent calls to 'luakit' exit post launch, leaving just the original process
-# Not 'userconf.lua' includes code to turn off session restore.
+# Start dbus-daemon to avoid waiting for DBUS timeouts.
+# Also needed by qutebrowser to communicate with running instances and by Onboard.
 # Export and save DBUS_SESSION_BUS_ADDRESS variable so that processes can communicate.
 # Note if entering through a separate shell, need to retrieve and export again
 

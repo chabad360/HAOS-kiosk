@@ -467,7 +467,7 @@ ALLOWED_PATHS = {"/bin", "/usr/bin", "/usr/local/bin"} # Executables must be in 
 ALLOWED_PATHS_STR = ":".join(ALLOWED_PATHS)
 
 ## Commands that are white-listed -- all others are blocked (Note: set to ".*" to allow all or "" to block all)
-DEFAULT_COMMAND_WHITELIST_REGEX = r"cat|date|dbus-send|echo|false|grep|head|ls|luakit|notify-send|ping|ping6|ps|pstree|sleep|tail|test|top|tree|xdotool|xset"
+DEFAULT_COMMAND_WHITELIST_REGEX = r"cat|date|dbus-send|echo|false|grep|head|ls|notify-send|ping|ping6|ps|pstree|qutebrowser|sleep|tail|test|top|tree|xdotool|xset"
 COMMAND_WHITELIST_REGEX = os.getenv("COMMAND_WHITELIST", DEFAULT_COMMAND_WHITELIST_REGEX).strip()
 
 COMPILED_WHITELIST_REGEX: re.Pattern[str] | None = None
@@ -662,7 +662,7 @@ def handle_launch_url(url: str = DEFAULT_LAUNCH_URL, timeout: int | None = None,
     if url != "about:blank" and not url.startswith(("http://", "https://")):
         url = "http://" + url
 
-    cmd = ["luakit", "-n",  url]
+    cmd = ["qutebrowser", f":open {url}"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("display_on", optional=["blank_timeout"],
