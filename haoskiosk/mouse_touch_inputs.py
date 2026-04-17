@@ -519,10 +519,14 @@ VALID_URL_REGEX: Final[re.Pattern[str]] = re.compile(
     r'(?:/?|[/?][^\s]*)?$',           # Path/query/fragment (allows #fragment, rejects spaces)
     re.IGNORECASE
 )
+FORBIDDEN_URL_CHARS: Final[set[str]] = {'"', "'", "`", "\\", "\n", "\r", "\t"}
 
 def is_valid_url(url: str) -> bool:
     """Validate URL format (allows http://, https://, bare domain/IP, path, query, fragment)."""
-    return bool(url == 'about:blank' or VALID_URL_REGEX.fullmatch(url.strip()))
+    url = url.strip()
+    if any(ch in url for ch in FORBIDDEN_URL_CHARS):
+        return False
+    return bool(url == 'about:blank' or VALID_URL_REGEX.fullmatch(url))
 
 #-------------------------------------------------------------------------------
 #### Globals
@@ -635,19 +639,19 @@ def register_function(
 @register_function("back")
 def handle_back(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Go back in browser history."""
-    cmd = ["qutebrowser", ":back"]
+    cmd = ["qutebrowser", "--command", ":back"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("forward")
 def handle_forward(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Go forward in browser history."""
-    cmd = ["qutebrowser", ":forward"]
+    cmd = ["qutebrowser", "--command", ":forward"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("refresh_browser")
 def handle_refresh_browser(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Reload current page."""
-    cmd = ["qutebrowser", ":reload"]
+    cmd = ["qutebrowser", "--command", ":reload"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("launch_url", optional=["url"])
@@ -662,7 +666,7 @@ def handle_launch_url(url: str = DEFAULT_LAUNCH_URL, timeout: int | None = None,
     if url != "about:blank" and not url.startswith(("http://", "https://")):
         url = "http://" + url
 
-    cmd = ["qutebrowser", f":open {url}"]
+    cmd = ["qutebrowser", url]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("display_on", optional=["blank_timeout"],

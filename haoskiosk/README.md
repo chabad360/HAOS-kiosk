@@ -916,9 +916,9 @@ implemented the above as:
 
 "3_TOUCH_1_SWIPE_RIGHT": {"cmds": [["xdotool", "key", "--clearmodifiers", "ctrl+Left"]], "msg": "Go back in the history browser"}
 
-"2_TOUCH_3_TAP": {"cmds": "qutebrowser \":open $HA_URL/$HA_DASHBOARD\"", "msg": "Restore default dashboard"}
+"2_TOUCH_3_TAP": {"cmds": "qutebrowser \"$HA_URL/$HA_DASHBOARD\"", "msg": "Restore default dashboard"}
 
-"2_TOUCH_4_TAP": {"cmds": "qutebrowser \":open www.google.com\"", "msg": "Open Google search"}'
+"2_TOUCH_4_TAP": {"cmds": "qutebrowser \"www.google.com\"", "msg": "Open Google search"}'
 ```
 
 ______________________________________________________________________

@@ -75,7 +75,7 @@ cleanup() {
     fi
     jobs -p | xargs -r kill
     [ -n "$TTY0_DELETED" ] && mknod -m 620 /dev/tty0 c 4 0
-    rm -f /root/.local/share/qutebrowser/webengine/Default/Cookies  # Remove cookie storage (not really necessary, but just in case...)
+    rm -f /root/.local/share/qutebrowser/webengine/Default/Cookies  # Clear persisted cookies to avoid stale kiosk auth state across restarts
     exit "$exit_code"
 }
 trap cleanup HUP INT QUIT ABRT TERM EXIT
@@ -84,6 +84,9 @@ trap cleanup HUP INT QUIT ABRT TERM EXIT
 #### Variables
 BROWSER="qutebrowser"
 BROWSER_FLAGS=
+FULLSCREEN_RETRY_COUNT=10
+FULLSCREEN_INIT_DELAY=1
+FULLSCREEN_CMD_DELAY=0.5
 
 ################################################################################
 #### Get config variables from HA add-on & set environment variables
@@ -290,7 +293,9 @@ script = f"""// ==UserScript==
     window.haBrowserRefreshInterval = setInterval(() => {{
       hardReloadCount += 1;
       if (hardReloadCount % 10 === 0) {{
-        window.location.reload(true);
+        const hardUrl = new URL(window.location.href);
+        hardUrl.searchParams.set('_haoskiosk_refresh', String(Date.now()));
+        window.location.replace(hardUrl.toString());
       }} else {{
         window.location.reload();
       }}
@@ -813,12 +818,23 @@ if [ "$DEBUG_MODE" != true ]; then
     ### Run browser in the background and wait for process to exit
     $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} "$HA_URL/$HA_DASHBOARD" &
     bashio::log.info "Launching $BROWSER browser(PID=$!): $HA_URL/$HA_DASHBOARD"
-    sleep 1
-    $BROWSER ":fullscreen" >/dev/null 2>&1 || true
+    FULLSCREEN_OK=false
+    for ((i=1; i<=FULLSCREEN_RETRY_COUNT; i++)); do
+        sleep "$FULLSCREEN_INIT_DELAY"
+        if pgrep -x "$BROWSER" >/dev/null 2>&1; then
+            sleep "$FULLSCREEN_CMD_DELAY"
+            if $BROWSER --command ":fullscreen" >/dev/null 2>&1; then
+                bashio::log.info "Enabled browser fullscreen mode."
+                FULLSCREEN_OK=true
+                break
+            fi
+        fi
+    done
+    [ "$FULLSCREEN_OK" = true ] || bashio::log.warning "Could not enable browser fullscreen mode."
 
     count=0
     while true; do  # Wait for all browser processes to exit
-        if pgrep -x "$BROWSER" > /dev/null 2>&1 || pgrep -f -- "^$BROWSER " > /dev/null 2>&1; then
+        if pgrep -x "$BROWSER" > /dev/null 2>&1; then
             count=0
         else
             count=$((count + 1))

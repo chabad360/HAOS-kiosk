@@ -159,10 +159,14 @@ VALID_URL_REGEX: Final[re.Pattern[str]] = re.compile(
     r'(?:/?|[/?][^\s]*)?$',           # Path/query/fragment (allows #fragment, rejects spaces)
     re.IGNORECASE
 )
+FORBIDDEN_URL_CHARS: Final[set[str]] = {'"', "'", "`", "\\", "\n", "\r", "\t"}
 
 def is_valid_url(url: str) -> bool:
     """Validate URL format (allows http://, https://, bare domain/IP, path, query, fragment)."""
-    return bool(url == 'about:blank' or VALID_URL_REGEX.fullmatch(url.strip()))
+    url = url.strip()
+    if any(ch in url for ch in FORBIDDEN_URL_CHARS):
+        return False
+    return bool(url == 'about:blank' or VALID_URL_REGEX.fullmatch(url))
 
 # --------------------------------------------------------------------------- #
 # Setup
@@ -464,14 +468,14 @@ async def handle_launch_url(data: Payload) -> dict[str, Any]:
     url = str(data["url"]) if data.get("url") else DEFAULT_LAUNCH_URL
     if url != "about:blank" and not url.startswith(("http://", "https://")):
         url = "http://" + url
-    asyncio.create_task(execute_command(["qutebrowser", f":open {url}"], log_prefix="launch_url", allow_command=True))  # Run in the background
+    asyncio.create_task(execute_command(["qutebrowser", url], log_prefix="launch_url", allow_command=True))  # Run in the background
     result = {"success": True, "stdout": "", "stderr": "", "returncode": 0}
     return {"success": result["success"], "result": result}
 
 @register_function("refresh_browser")
 async def handle_refresh_browser(data: Payload) -> dict[str, Any]:  # pylint: disable=unused-argument
     """Send Ctrl+R to refresh browser."""
-    result = await execute_command(["qutebrowser", ":reload"],
+    result = await execute_command(["qutebrowser", "--command", ":reload"],
                                    timeout=SHORT_TIMEOUT, log_prefix="refresh_browser", allow_command=True)
     return {"success": result["success"]}
 

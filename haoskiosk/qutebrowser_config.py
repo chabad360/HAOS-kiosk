@@ -5,6 +5,7 @@ Version: 1.3.1
 """
 
 import os
+from qutebrowser.config import configexc
 
 
 def _as_bool(value: str | None, default: bool) -> bool:
@@ -47,8 +48,8 @@ for setting, value in (
 ):
     try:
         config.set(setting, value)
-    except Exception:  # pragma: no cover
-        pass
+    except configexc.Error as err:  # pragma: no cover
+        print(f"[haoskiosk] qutebrowser setting skipped: {setting} ({err})")
 
 for mode in ("normal", "passthrough"):
     config.bind("<Ctrl-r>", "reload", mode=mode)
