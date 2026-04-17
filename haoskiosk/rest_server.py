@@ -91,7 +91,23 @@ ALLOW_ALL_USER_COMMANDS: bool = os.getenv("ALLOW_ALL_USER_COMMANDS", "false").lo
 MAX_CONCURRENT_COMMANDS: int = 5
 SHORT_TIMEOUT: int = 5  # Timeout used for simple commands
 
-DEFAULT_LAUNCH_URL = f"{(os.getenv('HA_URL') or 'about:blank').rstrip('/')}/{os.getenv('HA_DASHBOARD') or ''}".strip('/')
+def get_default_launch_url() -> str:
+    """Build normalized default launch URL from environment."""
+    if (launch_url := (os.getenv("HA_LAUNCH_URL") or "").strip()):
+        return launch_url
+
+    ha_url = (os.getenv("HA_URL") or "about:blank").strip()
+    dashboard = (os.getenv("HA_DASHBOARD") or "").strip()
+
+    if ha_url != "about:blank" and not ha_url.startswith(("http://", "https://")):
+        ha_url = "http://" + ha_url
+
+    if dashboard:
+        return f"{ha_url.rstrip('/')}/{dashboard.lstrip('/')}"
+    return ha_url if ha_url == "about:blank" else f"{ha_url.rstrip('/')}/"
+
+
+DEFAULT_LAUNCH_URL = get_default_launch_url()
 
 
 # --------------------------------------------------------------------------- #
@@ -836,7 +852,7 @@ async def handle_toggle_audio(data: Payload) -> dict[str, Any]:  # pylint: disab
 async def handle_hide_keyboard(data: Payload) -> dict[str, Any]:  # pylint: disable=unused-argument
     """Hide the Onboard on-screen keyboard via DBus."""
     result = await execute_command(
-        ["dbus-send", "--type=method_call", "--dest=org.onboard.Onboard",
+        ["dbus-send", "--session", "--type=method_call", "--dest=org.onboard.Onboard",
          "/org/onboard/Onboard/Keyboard", "org.onboard.Onboard.Keyboard.Hide"],
         print_stdout=False, timeout=SHORT_TIMEOUT, log_prefix="hide_keyboard", allow_command=True,
     )

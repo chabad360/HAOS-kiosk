@@ -160,6 +160,18 @@ if [ -z "$HA_USERNAME" ] || [ -z "$HA_PASSWORD" ]; then
     exit 1
 fi
 
+# Normalize HA URL and launch target
+if [ "$HA_URL" != "about:blank" ] && [[ "$HA_URL" != http://* && "$HA_URL" != https://* ]]; then
+    HA_URL="http://$HA_URL"
+fi
+if [ -n "$HA_DASHBOARD" ]; then
+    HA_LAUNCH_URL="${HA_URL%/}/${HA_DASHBOARD#/}"
+else
+    HA_LAUNCH_URL="${HA_URL%/}/"
+fi
+export HA_URL HA_LAUNCH_URL
+bashio::log.info "HA_LAUNCH_URL=$HA_LAUNCH_URL"
+
 ################################################################################
 #### Build qutebrowser HAOS kiosk Greasemonkey script from environment
 generate_qutebrowser_userscript() {
@@ -548,7 +560,7 @@ cat <<'EOF' > /tmp/new_keybinds.xml
   <!-- Toggle Onboard onscreen keyboard: Ctrl+Alt+o -->
   <keybind key="C-A-o">
     <action name="Execute">
-      <command>dbus-send --type=method_call --dest=org.onboard.Onboard /org/onboard/Onboard/Keyboard org.onboard.Onboard.Keyboard.ToggleVisible</command>
+      <command>dbus-send --session --type=method_call --dest=org.onboard.Onboard /org/onboard/Onboard/Keyboard org.onboard.Onboard.Keyboard.ToggleVisible</command>
     </action>
   </keybind>
 
@@ -832,8 +844,8 @@ fi
 #### Start browser (or debug mode)  and wait/sleep
 if [ "$DEBUG_MODE" != true ]; then
     ### Run browser in the background and wait for process to exit
-    $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} "$HA_URL/$HA_DASHBOARD" &
-    bashio::log.info "Launching $BROWSER browser(PID=$!): $HA_URL/$HA_DASHBOARD"
+    $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} "$HA_LAUNCH_URL" &
+    bashio::log.info "Launching $BROWSER browser(PID=$!): $HA_LAUNCH_URL"
     FULLSCREEN_OK=false
     for ((i=1; i<=FULLSCREEN_RETRY_COUNT; i++)); do
         sleep "$FULLSCREEN_INIT_DELAY"

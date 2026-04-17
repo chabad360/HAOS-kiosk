@@ -378,7 +378,23 @@ __copyright__ = "Copyright 2025-2026 Jeff Kosowsky"
 XINPUT_RESTART_DELAY: int     = 5    # Seconds before restarting xinput after crash
 CMD_TIMEOUT: int | None       = 30   # Seconds before spawned action command timesout or None if no timeout
 GESTURE_CMDS_FILES: list[str] = ["/data/options.json", "gesture_commands.json"]
-DEFAULT_LAUNCH_URL = f"{(os.getenv('HA_URL') or 'about:blank').rstrip('/')}/{os.getenv('HA_DASHBOARD') or ''}".strip('/')
+def get_default_launch_url() -> str:
+    """Build normalized default launch URL from environment."""
+    if (launch_url := (os.getenv("HA_LAUNCH_URL") or "").strip()):
+        return launch_url
+
+    ha_url = (os.getenv("HA_URL") or "about:blank").strip()
+    dashboard = (os.getenv("HA_DASHBOARD") or "").strip()
+
+    if ha_url != "about:blank" and not ha_url.startswith(("http://", "https://")):
+        ha_url = "http://" + ha_url
+
+    if dashboard:
+        return f"{ha_url.rstrip('/')}/{dashboard.lstrip('/')}"
+    return ha_url if ha_url == "about:blank" else f"{ha_url.rstrip('/')}/"
+
+
+DEFAULT_LAUNCH_URL = get_default_launch_url()
 
 #-------------------------------------------------------------------------------
 ## Initialization
@@ -389,6 +405,8 @@ def initialize() -> None:
     TOGGLE_ONBOARD_KEYBOARD: CommandsDict = {  # Toggle Onboard keyboard visibility
         'cmds': [[
             "dbus-send",
+            "--session",
+            "--type=method_call",
             "--dest=org.onboard.Onboard",
             "/org/onboard/Onboard/Keyboard",
             "org.onboard.Onboard.Keyboard.ToggleVisible",
@@ -733,7 +751,7 @@ def handle_screenshot(filename: str | None = None, quality: int | None = None, d
 @register_function("toggle_keyboard")
 def handle_toggle_keyboard(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Toggle onscreen keyboard."""
-    cmd = ["dbus-send", "--type=method_call", "--dest=org.onboard.Onboard", "/org/onboard/Onboard/Keyboard", "org.onboard.Onboard.Keyboard.ToggleVisible"]
+    cmd = ["dbus-send", "--session", "--type=method_call", "--dest=org.onboard.Onboard", "/org/onboard/Onboard/Keyboard", "org.onboard.Onboard.Keyboard.ToggleVisible"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("toggle_audio")
