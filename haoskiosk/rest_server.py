@@ -464,7 +464,7 @@ async def handle_launch_url(data: Payload) -> dict[str, Any]:
     url = str(data["url"]) if data.get("url") else DEFAULT_LAUNCH_URL
     if url != "about:blank" and not url.startswith(("http://", "https://")):
         url = "http://" + url
-    asyncio.create_task(execute_command(["qutebrowser", f":open {url}"], log_prefix="launch_url", allow_command=True))  # Run in the background
+    asyncio.create_task(execute_command(["qutebrowser", "--target", "auto", url], log_prefix="launch_url", allow_command=True))  # Run in the background
     result = {"success": True, "stdout": "", "stderr": "", "returncode": 0}
     return {"success": result["success"], "result": result}
 

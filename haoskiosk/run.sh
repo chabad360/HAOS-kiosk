@@ -167,7 +167,9 @@ export GTK_CSD=0                      # Disable client side decorations (???)
 export QT_LINUX_ACCESSIBILITY_ALWAYS_ON=1  # Needed for Onboard auto-show with Qt apps
 ################################################################################
 #### Configure qutebrowser
-mkdir -p /root/.config/qutebrowser/greasemonkey
+QUTE_GREASEMONKEY_DIR="/root/.config/qutebrowser/greasemonkey"
+mkdir -p "$QUTE_GREASEMONKEY_DIR"
+export QUTE_GREASEMONKEY_DIR
 
 python3 <<'PY'
 import json
@@ -265,7 +267,7 @@ gm_script = f"""// ==UserScript==
 }})();
 """
 
-path = Path("/root/.config/qutebrowser/greasemonkey/haos_kiosk_autologin.js")
+path = Path(os.getenv("QUTE_GREASEMONKEY_DIR", "/root/.config/qutebrowser/greasemonkey")) / "haos_kiosk_autologin.js"
 path.write_text(gm_script, encoding="utf-8")
 PY
 

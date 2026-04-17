@@ -662,7 +662,7 @@ def handle_launch_url(url: str = DEFAULT_LAUNCH_URL, timeout: int | None = None,
     if url != "about:blank" and not url.startswith(("http://", "https://")):
         url = "http://" + url
 
-    cmd = ["qutebrowser", f":open {url}"]
+    cmd = ["qutebrowser", "--target", "auto", url]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("display_on", optional=["blank_timeout"],
