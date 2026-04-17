@@ -6,7 +6,7 @@
 # Date: April 2026
 ################################################################################
 
-ARG BUILD_FROM
+ARG BUILD_FROM=ghcr.io/home-assistant/base:latest
 FROM $BUILD_FROM
 
 ARG BUILD_VERSION
