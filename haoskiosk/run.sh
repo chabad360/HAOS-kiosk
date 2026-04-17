@@ -75,14 +75,14 @@ cleanup() {
     fi
     jobs -p | xargs -r kill
     [ -n "$TTY0_DELETED" ] && mknod -m 620 /dev/tty0 c 4 0
-    rm -f /root/.local/share/luakit/cookies.db  # Remove cookie storage (not really necessary, but just in case...)
+    rm -f /root/.local/share/qutebrowser/webengine/Default/Cookies  # Remove cookie storage (not really necessary, but just in case...)
     exit "$exit_code"
 }
 trap cleanup HUP INT QUIT ABRT TERM EXIT
 
 ################################################################################
 #### Variables
-BROWSER="luakit"
+BROWSER="qutebrowser"
 BROWSER_FLAGS=
 
 ################################################################################
@@ -158,6 +158,153 @@ if [ -z "$HA_USERNAME" ] || [ -z "$HA_PASSWORD" ]; then
 fi
 
 ################################################################################
+#### Build qutebrowser HAOS kiosk Greasemonkey script from environment
+generate_qutebrowser_userscript() {
+    python3 - <<'PY'
+import json
+import os
+from pathlib import Path
+
+script_dir = Path("/root/.local/share/qutebrowser/greasemonkey")
+script_dir.mkdir(parents=True, exist_ok=True)
+script_path = script_dir / "haoskiosk.user.js"
+
+ha_url = (os.getenv("HA_URL") or "http://localhost:8123").rstrip("/")
+parts = ha_url.split("/", 3)
+ha_url_base = "/".join(parts[:3]) if len(parts) >= 3 else ha_url
+
+raw_sidebar = (os.getenv("HA_SIDEBAR") or "").strip().lower()
+sidebar_map = {"full": "", "none": '"always_hidden"', "narrow": '"auto"', "": ""}
+sidebar = sidebar_map.get(raw_sidebar, "")
+
+theme = (os.getenv("HA_THEME") or "").strip()
+if theme:
+    first = theme[0]
+    if first not in "\"'{":
+        theme = f'"{theme}"'
+
+login_delay = max(float(os.getenv("LOGIN_DELAY") or "1"), 0.0)
+browser_refresh = max(int(os.getenv("BROWSER_REFRESH") or "600"), 0)
+
+script = f"""// ==UserScript==
+// @name         HAOS Kiosk qutebrowser helpers
+// @namespace    haoskiosk
+// @version      1.0
+// @match        *://*/*
+// @run-at       document-end
+// ==/UserScript==
+(function() {{
+  'use strict';
+  const haUrlBase = {json.dumps(ha_url_base)};
+  const username = {json.dumps(os.getenv("HA_USERNAME") or "")};
+  const password = {json.dumps(os.getenv("HA_PASSWORD") or "")};
+  const loginDelayMs = {int(login_delay * 1000)};
+  const sidebar = {json.dumps(sidebar)};
+  const theme = {json.dumps(theme)};
+  const browserRefresh = {browser_refresh};
+
+  const here = window.location.href || '';
+
+  if (here.startsWith(haUrlBase + '/auth/authorize?response_type=code')) {{
+    setTimeout(() => {{
+      try {{
+        const haInputs = document.querySelectorAll('ha-input');
+        const usernameField = haInputs[0]?.shadowRoot?.querySelector('wa-input')?.shadowRoot?.querySelector('input[autocomplete="username"]')
+          || document.querySelector('input[autocomplete="username"]');
+        const passwordField = haInputs[1]?.shadowRoot?.querySelector('wa-input')?.shadowRoot?.querySelector('input[autocomplete="current-password"]')
+          || document.querySelector('input[autocomplete="current-password"]');
+        const haCheckbox = document.querySelector('ha-checkbox');
+        const submitButton = document.querySelector('ha-button');
+
+        if (usernameField && passwordField) {{
+          usernameField.value = username;
+          usernameField.dispatchEvent(new Event('input', {{ bubbles: true }}));
+          usernameField.dispatchEvent(new Event('change', {{ bubbles: true }}));
+          passwordField.value = password;
+          passwordField.dispatchEvent(new Event('input', {{ bubbles: true }}));
+          passwordField.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        }}
+        if (haCheckbox) {{
+          haCheckbox.setAttribute('checked', '');
+          haCheckbox.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        }}
+        if (submitButton) {{
+          submitButton.click();
+        }}
+      }} catch (_) {{}}
+    }}, loginDelayMs);
+  }}
+
+  if (here.startsWith(haUrlBase + '/') && !here.startsWith(haUrlBase + '/auth/')) {{
+    try {{
+      localStorage.setItem('browser_mod-browser-id', 'haos_kiosk');
+      if (sidebar !== '') {{
+        localStorage.setItem('dockedSidebar', sidebar);
+      }} else {{
+        localStorage.removeItem('dockedSidebar');
+      }}
+      if (theme !== '') {{
+        localStorage.setItem('selectedTheme', theme);
+      }} else {{
+        localStorage.removeItem('selectedTheme');
+      }}
+      if (document.activeElement && typeof document.activeElement.blur === 'function') {{
+        document.activeElement.blur();
+      }}
+    }} catch (_) {{}}
+  }}
+
+  window.addEventListener('unhandledrejection', function(e) {{
+    const reason = e.reason;
+    let suppress = false;
+    if (reason) {{
+      const msg = typeof reason.message === 'string' ? reason.message : '';
+      const name = (reason.name || '').toLowerCase();
+      if (
+        msg.includes('sw-modern.js') ||
+        msg.includes('load failed') ||
+        msg.includes('service worker') ||
+        (name === 'invalidstateerror' && (msg.includes('document visibility state is hidden') || msg.includes('view transition'))) ||
+        reason === '[object Object]' ||
+        msg === '' ||
+        typeof reason === 'object'
+      ) {{
+        suppress = true;
+      }}
+    }}
+    if (suppress) {{
+      e.preventDefault();
+    }}
+  }});
+
+  if (!window.haWsRecoveryInterval) {{
+    window.haWsRecoveryInterval = setInterval(() => {{
+      if (window.APP && window.APP.connection && !window.APP.connection.connected) {{
+        window.location.reload();
+      }}
+    }}, 10000);
+  }}
+
+  if (browserRefresh > 0 && !window.haBrowserRefreshInterval) {{
+    let hardReloadCount = 0;
+    window.haBrowserRefreshInterval = setInterval(() => {{
+      hardReloadCount += 1;
+      if (hardReloadCount % 10 === 0) {{
+        window.location.reload(true);
+      }} else {{
+        window.location.reload();
+      }}
+    }}, browserRefresh * 1000);
+  }}
+}})();
+"""
+
+script_path.write_text(script, encoding="utf-8")
+PY
+}
+generate_qutebrowser_userscript
+
+################################################################################
 ### GTK and DBUS-related environment variables to improve stability
 
 export NO_AT_BRIDGE=1                 # Stop GTK from touching at-spi bus
@@ -167,11 +314,8 @@ export DBUS_SESSION_BUS_TIMEOUT=5000  # Shorten DBUS timeouts
 export GTK_CSD=0                      # Disable client side decorations (???)
 ################################################################################
 #### Start Dbus
-# Start dbus-daemon to Avoids waiting for DBUS timeouts (e.g., luakit)
-# Also needed by luakit to enforce unique instance by default
-# Note do *not* use '-U' flag when calling luakit browser
-# Subsequent calls to 'luakit' exit post launch, leaving just the original process
-# Not 'userconf.lua' includes code to turn off session restore.
+# Start dbus-daemon to avoid waiting for DBUS timeouts
+# Also used by onboard for onscreen keyboard interaction
 # Export and save DBUS_SESSION_BUS_ADDRESS variable so that processes can communicate.
 # Note if entering through a separate shell, need to retrieve and export again
 
@@ -669,10 +813,12 @@ if [ "$DEBUG_MODE" != true ]; then
     ### Run browser in the background and wait for process to exit
     $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} "$HA_URL/$HA_DASHBOARD" &
     bashio::log.info "Launching $BROWSER browser(PID=$!): $HA_URL/$HA_DASHBOARD"
+    sleep 1
+    $BROWSER ":fullscreen" >/dev/null 2>&1 || true
 
     count=0
     while true; do  # Wait for all browser processes to exit
-        if pgrep -f -- "^$BROWSER " > /dev/null 2>&1; then
+        if pgrep -x "$BROWSER" > /dev/null 2>&1 || pgrep -f -- "^$BROWSER " > /dev/null 2>&1; then
             count=0
         else
             count=$((count + 1))

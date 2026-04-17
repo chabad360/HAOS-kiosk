@@ -103,7 +103,7 @@ ALLOWED_PATHS = {"/bin", "/usr/bin", "/usr/local/bin"} # Executables must be in 
 ALLOWED_PATHS_STR = ":".join(ALLOWED_PATHS)
 
 ## Commands that are white-listed -- all others are blocked (Note: set to ".*" to allow all or "" to block all)
-DEFAULT_COMMAND_WHITELIST_REGEX = r"cat|date|dbus-send|echo|false|grep|head|ls|luakit|notify-send|ping|ping6|ps|pstree|sleep|tail|test|top|tree|xdotool|xset"
+DEFAULT_COMMAND_WHITELIST_REGEX = r"cat|date|dbus-send|echo|false|grep|head|ls|notify-send|ping|ping6|ps|pstree|qutebrowser|sleep|tail|test|top|tree|xdotool|xset"
 COMMAND_WHITELIST_REGEX = os.getenv("COMMAND_WHITELIST", DEFAULT_COMMAND_WHITELIST_REGEX).strip()
 
 COMPILED_WHITELIST_REGEX: re.Pattern[str] | None = None
@@ -464,15 +464,15 @@ async def handle_launch_url(data: Payload) -> dict[str, Any]:
     url = str(data["url"]) if data.get("url") else DEFAULT_LAUNCH_URL
     if url != "about:blank" and not url.startswith(("http://", "https://")):
         url = "http://" + url
-    asyncio.create_task(execute_command(["luakit", "-n", url], log_prefix="launch_url", allow_command=True))  # Run in the background
+    asyncio.create_task(execute_command(["qutebrowser", f":open {url}"], log_prefix="launch_url", allow_command=True))  # Run in the background
     result = {"success": True, "stdout": "", "stderr": "", "returncode": 0}
     return {"success": result["success"], "result": result}
 
 @register_function("refresh_browser")
 async def handle_refresh_browser(data: Payload) -> dict[str, Any]:  # pylint: disable=unused-argument
     """Send Ctrl+R to refresh browser."""
-    result = await execute_command( ["xdotool", "key", "--clearmodifiers", "ctrl+r"],
-                                    timeout=SHORT_TIMEOUT, log_prefix="refresh_browser", allow_command=True)
+    result = await execute_command(["qutebrowser", ":reload"],
+                                   timeout=SHORT_TIMEOUT, log_prefix="refresh_browser", allow_command=True)
     return {"success": result["success"]}
 
 ### Display

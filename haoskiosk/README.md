@@ -298,9 +298,9 @@ your network.
 ### Debug
 
 For debugging purposes, launches `Xorg` and `openbox` and then sleeps
-without launching `luakit`.\
-Manually, launch `luakit` (e.g.,
-`luakit -U localhost:8123/<your-dashboard>`) from Docker container.\
+without launching `qutebrowser`.\
+Manually, launch `qutebrowser` (e.g.,
+`qutebrowser localhost:8123/<your-dashboard>`) from Docker container.\
 E.g., `sudo docker exec -it addon_haoskiosk bash`
 
 ______________________________________________________________________
@@ -696,7 +696,7 @@ actions:
      See 'examples' folder for simple Bash script example screensaver.
 
 2. Use custom command(s) to change internal parameters of HAOSKiosk and the
-   luakit browser configuration.
+   qutebrowser browser configuration.
 
 ______________________________________________________________________
 
@@ -916,9 +916,9 @@ implemented the above as:
 
 "3_TOUCH_1_SWIPE_RIGHT": {"cmds": [["xdotool", "key", "--clearmodifiers", "ctrl+Left"]], "msg": "Go back in the history browser"}
 
-"2_TOUCH_3_TAP": {"cmds": "luakit \"$HA_URL/$HA_DASHBOARD\"", "msg": "Restore default dashboard"}
+"2_TOUCH_3_TAP": {"cmds": "qutebrowser \":open $HA_URL/$HA_DASHBOARD\"", "msg": "Restore default dashboard"}
 
-"2_TOUCH_4_TAP": {"cmds": "luakit \"www.google.com\"", "msg": "Open Google search"}'
+"2_TOUCH_4_TAP": {"cmds": "qutebrowser \":open www.google.com\"", "msg": "Open Google search"}'
 ```
 
 ______________________________________________________________________
@@ -975,7 +975,7 @@ Luakit modes and commands are similar to vi
 - To return to *passthrough* mode, press `ctl-Z` or alternatively, press
   `i` to enter *insert*
 
-See [luakit documentation](https://wiki.archlinux.org/title/Luakit) for
+See [qutebrowser documentation](https://qutebrowser.org/doc/help/) for
 further usage information and available commands.
 
 ______________________________________________________________________
