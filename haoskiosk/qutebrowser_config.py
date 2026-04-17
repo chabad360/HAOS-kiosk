@@ -29,6 +29,9 @@ def _as_int(value: str | None, default: int, minimum: int) -> int:
 
 config.load_autoconfig(False)
 
+# Required when running as root (HAOS containers run as root)
+c.qt.args = ["--no-sandbox"]
+
 c.auto_save.session = False
 c.url.default_page = "about:blank"
 c.url.start_pages = ["about:blank"]

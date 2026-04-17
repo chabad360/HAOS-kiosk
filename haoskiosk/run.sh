@@ -330,7 +330,8 @@ export GTK_USE_PORTAL=0               # Disable portals
 export GIO_USE_VFS=local              # Local-only GIO
 export DBUS_SESSION_BUS_TIMEOUT=5000  # Shorten DBUS timeouts
 export GTK_CSD=0                      # Disable client side decorations (???)
-export QTWEBENGINE_CHROMIUM_FLAGS="--no-sandbox"  # Required when running as root
+export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/runtime-root}"  # Needed for qutebrowser IPC socket
+mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 ################################################################################
 #### Start Dbus
 # Start dbus-daemon to avoid waiting for DBUS timeouts
@@ -837,7 +838,7 @@ if [ "$DEBUG_MODE" != true ]; then
         sleep "$FULLSCREEN_INIT_DELAY"
         if pgrep -x "$BROWSER" >/dev/null 2>&1; then
             sleep "$FULLSCREEN_CMD_DELAY"
-            if $BROWSER --command ":fullscreen" >/dev/null 2>&1; then
+            if $BROWSER ':fullscreen' >/dev/null 2>&1; then
                 bashio::log.info "Enabled browser fullscreen mode."
                 FULLSCREEN_OK=true
                 break
