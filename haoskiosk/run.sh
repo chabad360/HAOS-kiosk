@@ -186,6 +186,20 @@ ha_url = (os.getenv("HA_URL", "http://localhost:8123") or "http://localhost:8123
 username = os.getenv("HA_USERNAME", "")
 password = os.getenv("HA_PASSWORD", "")
 login_delay_ms = as_ms(os.getenv("LOGIN_DELAY", "1"), 1.0)
+raw_sidebar = (os.getenv("HA_SIDEBAR", "none") or "none").strip().lower()
+raw_theme = (os.getenv("HA_THEME", "") or "").strip()
+
+sidebar_map = {
+    "full": "",
+    "": "",
+    "none": "\"always_hidden\"",
+    "narrow": "\"auto\"",
+}
+sidebar_value = sidebar_map.get(raw_sidebar, "")
+
+theme_value = raw_theme
+if theme_value and theme_value[0] not in ("\"", "'", "{"):
+    theme_value = f"\"{theme_value}\""
 
 gm_script = f"""// ==UserScript==
 // @name         HAOS Kiosk Auto Login
@@ -200,6 +214,8 @@ gm_script = f"""// ==UserScript==
   const HA_USERNAME = {json.dumps(username)};
   const HA_PASSWORD = {json.dumps(password)};
   const LOGIN_DELAY_MS = {login_delay_ms};
+  const HA_SIDEBAR = {json.dumps(sidebar_value)};
+  const HA_THEME = {json.dumps(theme_value)};
 
   function isEditable(el) {{
     if (!el) return false;
@@ -223,6 +239,37 @@ gm_script = f"""// ==UserScript==
 
   function onHaAuthPage() {{
     return window.location.href.startsWith(`${{HA_URL_BASE}}/auth/`);
+  }}
+
+  function onHaDashboardPage() {{
+    return window.location.href.startsWith(`${{HA_URL_BASE}}/`) && !onHaAuthPage();
+  }}
+
+  function applyHaSettings() {{
+    if (!onHaDashboardPage()) return;
+    try {{
+      localStorage.setItem('browser_mod-browser-id', 'haos_kiosk');
+
+      const currentSidebar = localStorage.getItem('dockedSidebar') || '';
+      if (HA_SIDEBAR !== currentSidebar) {{
+        if (HA_SIDEBAR !== '') {{
+          localStorage.setItem('dockedSidebar', HA_SIDEBAR);
+        }} else {{
+          localStorage.removeItem('dockedSidebar');
+        }}
+      }}
+
+      const currentTheme = localStorage.getItem('selectedTheme') || '';
+      if (HA_THEME !== currentTheme) {{
+        if (HA_THEME !== '') {{
+          localStorage.setItem('selectedTheme', HA_THEME);
+        }} else {{
+          localStorage.removeItem('selectedTheme');
+        }}
+      }}
+    }} catch (_err) {{
+      // ignore
+    }}
   }}
 
   function runAutoLogin() {{
@@ -263,8 +310,12 @@ gm_script = f"""// ==UserScript==
   }}
 
   installKeyboardBlurHelper();
+  applyHaSettings();
   runAutoLogin();
-  new MutationObserver(runAutoLogin).observe(document.documentElement, {{ childList: true, subtree: true }});
+  new MutationObserver(() => {{
+    applyHaSettings();
+    runAutoLogin();
+  }}).observe(document.documentElement, {{ childList: true, subtree: true }});
 }})();
 """
 
@@ -772,6 +823,19 @@ if [ "$DEBUG_MODE" != true ]; then
     bashio::log.info "Launching $BROWSER browser(PID=$!): $HA_URL/$HA_DASHBOARD"
     sleep 1
     $BROWSER :open "$HA_URL/$HA_DASHBOARD"
+
+    if [[ "$BROWSER_REFRESH" =~ ^[0-9]+$ ]] && [ "$BROWSER_REFRESH" -gt 0 ]; then
+        bashio::log.info "Starting periodic browser refresh every ${BROWSER_REFRESH}s"
+        (
+            while pgrep -f -- "^$BROWSER " > /dev/null 2>&1; do
+                sleep "$BROWSER_REFRESH"
+                pgrep -f -- "^$BROWSER " > /dev/null 2>&1 || break
+                xdotool key --clearmodifiers ctrl+r >/dev/null 2>&1 || true
+            done
+        ) &
+    elif ! [[ "$BROWSER_REFRESH" =~ ^[0-9]+$ ]]; then
+        bashio::log.warning "Invalid BROWSER_REFRESH='$BROWSER_REFRESH' (must be integer >= 0); periodic refresh disabled"
+    fi
 
     # count=0
     # while true; do  # Wait for all browser processes to exit
