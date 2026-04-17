@@ -519,7 +519,7 @@ VALID_URL_REGEX: Final[re.Pattern[str]] = re.compile(
     r'(?:/?|[/?][^\s]*)?$',           # Path/query/fragment (allows #fragment, rejects spaces)
     re.IGNORECASE
 )
-FORBIDDEN_URL_CHARS: Final[set[str]] = {'"', "'", "`", "\\", "\n", "\r", "\t"}
+FORBIDDEN_URL_CHARS: Final[set[str]] = {'"', "'", "`", "\\", "\n", "\r", "\t", "\x00"}
 
 def is_valid_url(url: str) -> bool:
     """Validate URL format (allows http://, https://, bare domain/IP, path, query, fragment)."""

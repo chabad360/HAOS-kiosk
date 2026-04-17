@@ -188,6 +188,8 @@ if theme:
 
 login_delay = max(float(os.getenv("LOGIN_DELAY") or "1"), 0.0)
 browser_refresh = max(int(os.getenv("BROWSER_REFRESH") or "600"), 0)
+onscreen_keyboard = (os.getenv("ONSCREEN_KEYBOARD") or "false").strip().lower() == "true"
+rest_port = int(os.getenv("REST_PORT") or "8080")
 
 script = f"""// ==UserScript==
 // @name         HAOS Kiosk qutebrowser helpers
@@ -205,6 +207,8 @@ script = f"""// ==UserScript==
   const sidebar = {json.dumps(sidebar)};
   const theme = {json.dumps(theme)};
   const browserRefresh = {browser_refresh};
+  const onscreenKeyboard = {json.dumps(onscreen_keyboard)};
+  const restPort = {rest_port};
 
   const here = window.location.href || '';
 
@@ -255,6 +259,15 @@ script = f"""// ==UserScript==
         document.activeElement.blur();
       }}
     }} catch (_) {{}}
+  }}
+
+  // Hide Onboard on-screen keyboard after every page load via the kiosk REST server.
+  if (onscreenKeyboard) {{
+    fetch('http://127.0.0.1:' + restPort + '/hide_keyboard', {{
+      method: 'POST',
+      headers: {{ 'Content-Type': 'application/json' }},
+      body: '{{}}'
+    }}).catch(() => {{}});
   }}
 
   window.addEventListener('unhandledrejection', function(e) {{

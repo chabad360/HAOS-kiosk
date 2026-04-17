@@ -159,7 +159,7 @@ VALID_URL_REGEX: Final[re.Pattern[str]] = re.compile(
     r'(?:/?|[/?][^\s]*)?$',           # Path/query/fragment (allows #fragment, rejects spaces)
     re.IGNORECASE
 )
-FORBIDDEN_URL_CHARS: Final[set[str]] = {'"', "'", "`", "\\", "\n", "\r", "\t"}
+FORBIDDEN_URL_CHARS: Final[set[str]] = {'"', "'", "`", "\\", "\n", "\r", "\t", "\x00"}
 
 def is_valid_url(url: str) -> bool:
     """Validate URL format (allows http://, https://, bare domain/IP, path, query, fragment)."""
@@ -831,6 +831,65 @@ async def handle_toggle_audio(data: Payload) -> dict[str, Any]:  # pylint: disab
         "results": results,
     }
 
+### Onscreen keyboard
+@register_function("hide_keyboard")
+async def handle_hide_keyboard(data: Payload) -> dict[str, Any]:  # pylint: disable=unused-argument
+    """Hide the Onboard on-screen keyboard via DBus."""
+    result = await execute_command(
+        ["dbus-send", "--type=method_call", "--dest=org.onboard.Onboard",
+         "/org/onboard/Onboard/Keyboard", "org.onboard.Onboard.Keyboard.Hide"],
+        print_stdout=False, timeout=SHORT_TIMEOUT, log_prefix="hide_keyboard", allow_command=True,
+    )
+    return {"success": result["success"]}
+
+# --------------------------------------------------------------------------- #
+# CORS middleware (allows Greasemonkey scripts in qutebrowser to call this server)
+# --------------------------------------------------------------------------- #
+
+CORS_ALLOW_HEADERS = "Authorization, Content-Type"
+CORS_ALLOW_METHODS = "GET, POST, OPTIONS"
+
+# Matches localhost and loopback origins — the only origins that can reach this server
+# (which is bound to 127.0.0.1) — so any scheme+host combination on localhost is safe to allow.
+_LOCAL_ORIGIN_RE: re.Pattern[str] = re.compile(
+    r'^https?://(?:127\.0\.0\.1|::1|localhost)(?::\d{1,5})?$', re.IGNORECASE
+)
+
+def _cors_origin(request: web.Request) -> str:
+    """Return the request's Origin header if it is a local/localhost origin, else empty string."""
+    origin = request.headers.get("Origin", "")
+    return origin if _LOCAL_ORIGIN_RE.match(origin) else ""
+
+
+@web.middleware  #type: ignore[misc]
+async def cors_middleware(
+        request: web.Request, handler: Callable[[web.Request], Awaitable[web.Response]]
+) -> web.Response:
+    """
+    Adds CORS headers so that qutebrowser's Greasemonkey scripts (running in page
+    context with a different port origin) can call the REST server via fetch().
+    The server is already bound to 127.0.0.1, so only local callers can reach it.
+    Only localhost/loopback origins are reflected; other origins receive no CORS headers.
+    OPTIONS pre-flight requests are answered immediately without touching auth.
+    """
+    allowed_origin = _cors_origin(request)
+    if request.method == "OPTIONS":
+        headers: dict[str, str] = {
+            "Access-Control-Allow-Methods": CORS_ALLOW_METHODS,
+            "Access-Control-Allow-Headers": CORS_ALLOW_HEADERS,
+            "Access-Control-Max-Age": "600",
+        }
+        if allowed_origin:
+            headers["Access-Control-Allow-Origin"] = allowed_origin
+        return web.Response(status=204, headers=headers)
+
+    response = await handler(request)
+    if allowed_origin:
+        response.headers["Access-Control-Allow-Origin"] = allowed_origin
+        response.headers["Access-Control-Allow-Methods"] = CORS_ALLOW_METHODS
+        response.headers["Access-Control-Allow-Headers"] = CORS_ALLOW_HEADERS
+    return response
+
 # --------------------------------------------------------------------------- #
 # Security middleware
 # --------------------------------------------------------------------------- #
@@ -878,7 +937,7 @@ async def security_middleware(
 async def create_app() -> web.Application:
     """Create and configure the aiohttp Application instance."""
 
-    app = web.Application(middlewares=[security_middleware])
+    app = web.Application(middlewares=[cors_middleware, security_middleware])
 
     # Register routes for defined functions
     for fullname, func in FunctionRegistry.items():
