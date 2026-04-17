@@ -330,6 +330,7 @@ export GTK_USE_PORTAL=0               # Disable portals
 export GIO_USE_VFS=local              # Local-only GIO
 export DBUS_SESSION_BUS_TIMEOUT=5000  # Shorten DBUS timeouts
 export GTK_CSD=0                      # Disable client side decorations (???)
+export QTWEBENGINE_DISABLE_SANDBOX=1  # Required when running qutebrowser as root
 export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/tmp/runtime-root}"  # Needed for qutebrowser IPC socket
 mkdir -p "$XDG_RUNTIME_DIR" && chmod 700 "$XDG_RUNTIME_DIR"
 ################################################################################
