@@ -253,6 +253,7 @@ gm_script = f"""// ==UserScript==
         passwordField.value = HA_PASSWORD;
         passwordField.dispatchEvent(new Event('input', {{ bubbles: true }}));
         passwordField.dispatchEvent(new Event('change', {{ bubbles: true }}));
+        document.activeElement.blur();
 
         if (submitButton) submitButton.click();
       }} catch (_err) {{
@@ -729,13 +730,8 @@ fi
 echo "Audio Sinks (* = default)"
 pactl list short sinks | awk -v def="$sink" '{prefix = ($2 == def) ? "*" : " "; printf "  %s%s\n", prefix, $0}'
 
-### Launch Xinput parsing...
-bashio::log.info "Starting Mouse & Touch input gesture command parsing..."
-python3 -u /mouse_touch_inputs.py  -d 1 -w "$COMMAND_WHITELIST" &
-
 #### Start  HAOSKiosk REST server
-bashio::log.info "Starting HAOSKiosk REST server..."
-python3 -u /rest_server.py &
+# python3 -u /rest_server.py &
 
 #### Optionally start vnc server
 if [ -n "$VNC_SERVER" ]; then
@@ -768,23 +764,35 @@ fi
 
 #### Start browser (or debug mode)  and wait/sleep
 if [ "$DEBUG_MODE" != true ]; then
+    ### Create temporary state
+    mkdir -p /root/.local/share/qutebrowser/
+    touch /root/.local/share/qutebrowser/state
     ### Run browser in the background and wait for process to exit
-    $BROWSER ${BROWSER_FLAGS:+$BROWSER_FLAGS} "$HA_URL/$HA_DASHBOARD" &
+    $BROWSER ${BROWSER_FLAGS} &
     bashio::log.info "Launching $BROWSER browser(PID=$!): $HA_URL/$HA_DASHBOARD"
+    sleep 1
+    $BROWSER :open "$HA_URL/$HA_DASHBOARD"
 
-    count=0
-    while true; do  # Wait for all browser processes to exit
-        if pgrep -f -- "^$BROWSER " > /dev/null 2>&1; then
-            count=0
-        else
-            count=$((count + 1))
-        fi
-        [ $count -ge 3 ] && break # Exit if no browser process for at least 2*5=10 seconds
-        sleep 5
-    done
-    bashio::log.info "No $BROWSER instances remaining... exiting 'run.sh'..."
+    # count=0
+    # while true; do  # Wait for all browser processes to exit
+    #     if pgrep -f -- "^$BROWSER " > /dev/null 2>&1; then
+    #         count=0
+    #     else
+    #         count=$((count + 1))
+    #     fi
+    #     [ $count -ge 3 ] && break # Exit if no browser process for at least 2*5=10 seconds
+    #     sleep 5
+    # done
+    # bashio::log.info "No $BROWSER instances remaining... exiting 'run.sh'..."
 
 else  ### Debug mode
     bashio::log.info "Entering debug mode (X & $WINMGR window manager but no $BROWSER browser)..."
     exec sleep infinite
 fi
+
+### Launch Xinput parsing...
+bashio::log.info "Starting Mouse & Touch input gesture command parsing..."
+python3 -u /mouse_touch_inputs.py  -d 1 -w "$COMMAND_WHITELIST" &
+
+bashio::log.info "Starting HAOSKiosk REST server..."
+python3 -u /rest_server.py

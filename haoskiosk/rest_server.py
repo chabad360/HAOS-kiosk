@@ -464,14 +464,14 @@ async def handle_launch_url(data: Payload) -> dict[str, Any]:
     url = str(data["url"]) if data.get("url") else DEFAULT_LAUNCH_URL
     if url != "about:blank" and not url.startswith(("http://", "https://")):
         url = "http://" + url
-    asyncio.create_task(execute_command(["qutebrowser", "--target", "auto", url], log_prefix="launch_url", allow_command=True))  # Run in the background
+    asyncio.create_task(execute_command(["qutebrowser", ":open", url], log_prefix="launch_url", allow_command=True))  # Run in the background
     result = {"success": True, "stdout": "", "stderr": "", "returncode": 0}
     return {"success": result["success"], "result": result}
 
 @register_function("refresh_browser")
 async def handle_refresh_browser(data: Payload) -> dict[str, Any]:  # pylint: disable=unused-argument
     """Send Ctrl+R to refresh browser."""
-    result = await execute_command( ["xdotool", "key", "--clearmodifiers", "ctrl+r"],
+    result = await execute_command( ["qutebrowser", ":reload"],
                                     timeout=SHORT_TIMEOUT, log_prefix="refresh_browser", allow_command=True)
     return {"success": result["success"]}
 

@@ -635,19 +635,19 @@ def register_function(
 @register_function("back")
 def handle_back(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Go back in browser history."""
-    cmd = ["xdotool", "key", "--clearmodifiers", "ctrl+Left"]
+    cmd = ["qutebrowser", ":back"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("forward")
 def handle_forward(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Go forward in browser history."""
-    cmd = ["xdotool", "key", "--clearmodifiers", "ctrl+Right"]
+    cmd = ["qutebrowser", ":forward"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("refresh_browser")
 def handle_refresh_browser(timeout: int | None = None, *, _cmd_name: str = "unknown") -> None:
     """Reload current page."""
-    cmd = ["xdotool", "key", "--clearmodifiers", "ctrl+r"]
+    cmd = ["qutebrowser", ":reload"]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("launch_url", optional=["url"])
@@ -662,7 +662,7 @@ def handle_launch_url(url: str = DEFAULT_LAUNCH_URL, timeout: int | None = None,
     if url != "about:blank" and not url.startswith(("http://", "https://")):
         url = "http://" + url
 
-    cmd = ["qutebrowser", "--target", "auto", url]
+    cmd = ["qutebrowser", ":open", url]
     _run_subprocess(cmd, timeout=timeout, description=_cmd_name)
 
 @register_function("display_on", optional=["blank_timeout"],

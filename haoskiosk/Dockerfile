@@ -6,15 +6,23 @@
 # Date: April 2026
 ################################################################################
 
-ARG BUILD_FROM
+ARG BUILD_FROM=ghcr.io/home-assistant/base:latest
 FROM $BUILD_FROM
 
 ARG BUILD_VERSION
 ENV ADDON_VERSION=${BUILD_VERSION}
 
+COPY <<EOF /etc/apk/repositories 
+https://dl-cdn.alpinelinux.org/alpine/edge/main 
+https://dl-cdn.alpinelinux.org/alpine/edge/community
+EOF
+
+RUN cat /etc/apk/repositories >&2
+
 #===============================================================================
 ##### Install X, Browser and all necessary dependencies
-RUN apk update && apk add --no-cache \
+RUN apk update && apk upgrade --no-cache\
+     && apk add --no-cache \
 ## Xserver and graphics
      xorg-server \
      xf86-video-modesetting \
@@ -22,6 +30,8 @@ RUN apk update && apk add --no-cache \
      mesa-egl \
      mesa-gles \
      libdrm \
+     mesa-vulkan-intel \
+     vulkan-loader \
 ### X utils
      xdotool \
      xinput \
@@ -43,6 +53,8 @@ RUN apk update && apk add --no-cache \
      onboard \
      unclutter-xfixes \
      ttf-dejavu \
+     dbus \
+     dconf \
 ### Linux utils
      bash \
      util-linux \
@@ -51,8 +63,8 @@ RUN apk update && apk add --no-cache \
 ### Full Timezone info
      icu-data-full \
 ### Python libraries
-    py3-pip \
-    py3-xlib \
+     py3-pip \
+     py3-xlib \
 ### Sound
      pulseaudio-utils \
 #     alsa-utils alsa-plugins-pulse \
@@ -60,9 +72,9 @@ RUN apk update && apk add --no-cache \
 #     gstreamer-tools \
 #     gst-libav \
 ### VNC (for debugging) - run: x11vnc -display :0 -forever & \
-      x11vnc \
+     x11vnc \
 # Browser
-    && apk add --no-cache --repository=https://dl-cdn.alpinelinux.org/alpine/v3.21/community qutebrowser \
+     qutebrowser \
     && rm -rf /var/cache/apk/*
 
 #===============================================================================
@@ -81,5 +93,7 @@ RUN chmod a+x /run.sh
 COPY mouse_touch_inputs.py gesture_commands.json /
 COPY rest_server.py /
 RUN pip install --no-cache-dir  --break-system-packages aiohttp #Required for rest_server.py
+
+# USER 800:800
 
 CMD ["/run.sh"]
