@@ -838,6 +838,7 @@ if [ "$DEBUG_MODE" != true ]; then
         sleep "$FULLSCREEN_INIT_DELAY"
         if pgrep -x "$BROWSER" >/dev/null 2>&1; then
             sleep "$FULLSCREEN_CMD_DELAY"
+            # qutebrowser IPC command syntax: positional args prefixed with ':'
             if $BROWSER ':fullscreen' >/dev/null 2>&1; then
                 bashio::log.info "Enabled browser fullscreen mode."
                 FULLSCREEN_OK=true
